@@ -1,0 +1,81 @@
+dwd:
+  variables:
+    tas: 
+      resolution: daily
+      dataset: climate_summary
+      name: temperature_air_mean_2m
+      unit: degC
+    tasmax:
+      resolution: daily
+      dataset: climate_summary
+      name: temperature_air_max_2m
+      unit: degC
+    tasmin:
+      resolution: daily
+      dataset: climate_summary
+      name: temperature_air_min_2m
+      unit: degC
+    pr:
+      resolution: daily
+      dataset: climate_summary
+      name: precipitation_height
+      unit: mm
+    rsds:
+      resolution: daily
+      dataset: solar
+      name: radiation_sky_short_wave_diffuse
+      unit: J/cm2
+    sfcWind:
+      resolution: daily
+      dataset: climate_summary
+      name: wind_speed
+      unit: m/s
+era5-land:
+  params:
+    collection: ECMWF/ERA5_LAND/DAILY_AGGR
+    scale: 11132
+  variables:
+    tas:
+      name: temperature_2m
+      unit: K
+    tasmax:
+      name: temperature_2m_max
+      unit: K
+    tasmin:
+      name: temperature_2m_min
+      unit: K
+    pr:
+      name: total_precipitation_sum
+      unit: m
+    rsds:
+      name: surface_solar_radiation_downwards_sum
+      unit: J/m2
+gddp:
+  params:
+    collection: NASA/GDDP-CMIP6
+    model: ACCESS-CM2
+    scenario: historical
+    scale: 27830
+  variables:
+    tas:
+      name: tas
+      unit: K
+    tasmax:
+      name: tasmax
+      unit: K
+    tasmin:
+      name: tasmin
+      unit: K
+    pr:
+      name: pr
+      unit: kg m-2 s-1
+    rsds:
+      name: rsds
+      unit: W/m2
+    sfcWind:
+      name: sfcWind
+      unit: m/s
+    hurs:
+      name: hurs
+      unit: "%"
+
