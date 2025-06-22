@@ -1,13 +1,17 @@
 import pandas as pd
 from wetterdienst import Settings
 from wetterdienst.provider.dwd.observation import DwdObservationRequest
-import hydra
-from omegaconf import DictConfig
-import os
-import yaml
 import geemap
 import ee
 import ipdb
+import geopandas as gpd
+from omegaconf import DictConfig
+import os
+import yaml
+import time
+
+import warnings
+warnings.filterwarnings("ignore", category=Warning)
 
 def fetch_dwd_loc(cfg: DictConfig):
     
@@ -63,13 +67,12 @@ def fetch_dwd_loc(cfg: DictConfig):
     # ipdb.set_trace()
     df.set_index("date", inplace=True)
     df.reset_index(inplace=True)
-
+    df['source'] = 'DWD'
     # Standardize column names
     df = df.rename(columns={
         "date": "time",
         "value": "value",
         "station_id": "frequent_station",
-        "source": "DWD",
 
     })
     df["variable"] = parameter_key
@@ -79,36 +82,61 @@ def fetch_dwd_loc(cfg: DictConfig):
     
     df.to_csv(output_file, index=False)
     print(f"[✓] Saved data to {output_file}")
-
-def fetch_ee_loc(cfg: DictConfig, ee_image_collection):
+    return df
+def fetch_ee_loc(cfg: DictConfig):
     ee.Initialize(project='earthengine-462007')
+
+    provider = cfg.dataset.lower()
+    variable_name = cfg.weather.parameter
+    ee_image_collection = cfg.mappings[provider].params.collection
+    
+    # Prepare the image collection
+    sd = cfg.time_range.start_date
+    ed = cfg.time_range.end_date
+    var_name = cfg.mappings[provider].variables[variable_name].name
+    if provider=='gddp':
+        model = cfg.mappings[provider].params.model
+        scenario = cfg.mappings[provider].params.scenario
+        dataset = ee.ImageCollection(ee_image_collection)\
+                    .filter(ee.Filter.date(sd, ed))\
+                    .filter(ee.Filter.eq('model', model))\
+                    .filter(ee.Filter.eq('scenario', scenario))
+    elif provider=='era5-land':
+        dataset = ee.ImageCollection(ee_image_collection)\
+                    .filter(ee.Filter.date(sd, ed))
+    else:
+        raise ValueError(f"Provider '{provider}' is not supported for Earth Engine data fetching.")    
+    image_var = dataset.select(var_name)
+
+    
     lat = cfg.location.lat
     lon = cfg.location.lon
-    identifier = cfg.location.id
-    out_dir = cfg.download.out_dir
-    buffer = cfg.download.buffer
-    scale = cfg.download.scale
-    retry_delay = cfg.download.retry_delay
+    # identifier = cfg.location.id
+    out_dir = cfg.output.out_dir
+    # buffer = cfg.location.buffer_km
+    buffer = None
+    scale = cfg.mappings[provider].params.scale
+    # retry_delay = cfg.download.retry_delay
 
     os.makedirs(out_dir, exist_ok=True)
 
-    df = pd.DataFrame([{ "lat": lat, "lon": lon, "id": identifier }])
+    df = pd.DataFrame([{ "lat": lat, "lon": lon, "id": 0}])
     gdf = gpd.GeoDataFrame(df, geometry=gpd.points_from_xy(df["lon"], df["lat"]), crs="EPSG:4326")
 
     try:
         gdf_ee = geemap.gdf_to_ee(gdf)
 
-        if buffer:
-            pixel_values = gdf_ee.map(
-                lambda f: f.set('ts', ee_image_collection.getRegion(
-                    f.buffer(buffer).bounds().geometry(), scale))
-            )
-        else:
-            pixel_values = gdf_ee.map(
-                lambda f: f.set('ts', ee_image_collection.getRegion(
-                    f.geometry(), scale))
-            )
-
+        # if buffer:
+        #     pixel_values = gdf_ee.map(
+        #         lambda f: f.set('ts', image_var.getRegion(
+        #             f.buffer(buffer*1e3).bounds().geometry(), scale))
+        #     )
+        # else:
+        pixel_values = gdf_ee.map(
+            lambda f: f.set('ts', image_var.getRegion(
+                f.geometry(), scale))
+        )
+        # ipdb.set_trace()
         pixel_values_info = pixel_values.getInfo()
 
         for feature in pixel_values_info['features']:
@@ -128,5 +156,5 @@ def fetch_ee_loc(cfg: DictConfig, ee_image_collection):
 
     except Exception as e:
         print(f"[\u2717] Error: {e}")
-        time.sleep(retry_delay)
+        # time.sleep(retry_delay)
         raise RuntimeError("Failed to download data.")
