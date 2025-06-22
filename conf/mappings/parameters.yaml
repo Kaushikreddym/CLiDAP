@@ -1,4 +1,6 @@
 dwd:
+  type: in-situ 
+  subsetting: None
   variables:
     tas: 
       resolution: daily
@@ -31,6 +33,8 @@ dwd:
       name: wind_speed
       unit: m/s
 era5-land:
+  type: image
+  subsetting: point
   params:
     collection: ECMWF/ERA5_LAND/DAILY_AGGR
     scale: 11132
@@ -51,6 +55,8 @@ era5-land:
       name: surface_solar_radiation_downwards_sum
       unit: J/m2
 gddp:
+  type: image
+  subsetting: point
   params:
     collection: NASA/GDDP-CMIP6
     model: ACCESS-CM2

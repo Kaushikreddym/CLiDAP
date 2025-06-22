@@ -194,5 +194,6 @@ download_ee/
 download_ERA5/
 download_MSWX/
 download_station/
+download_CMIP/
 misc/
 
