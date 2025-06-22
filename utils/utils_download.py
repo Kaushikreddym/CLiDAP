@@ -1,3 +1,13 @@
+import pandas as pd
+from wetterdienst import Settings
+from wetterdienst.provider.dwd.observation import DwdObservationRequest
+import hydra
+from omegaconf import DictConfig
+import os
+import yaml
+import geemap
+import ee
+import ipdb
 
 def fetch_dwd_loc(cfg: DictConfig):
     
@@ -69,3 +79,54 @@ def fetch_dwd_loc(cfg: DictConfig):
     
     df.to_csv(output_file, index=False)
     print(f"[✓] Saved data to {output_file}")
+
+def fetch_ee_loc(cfg: DictConfig, ee_image_collection):
+    ee.Initialize(project='earthengine-462007')
+    lat = cfg.location.lat
+    lon = cfg.location.lon
+    identifier = cfg.location.id
+    out_dir = cfg.download.out_dir
+    buffer = cfg.download.buffer
+    scale = cfg.download.scale
+    retry_delay = cfg.download.retry_delay
+
+    os.makedirs(out_dir, exist_ok=True)
+
+    df = pd.DataFrame([{ "lat": lat, "lon": lon, "id": identifier }])
+    gdf = gpd.GeoDataFrame(df, geometry=gpd.points_from_xy(df["lon"], df["lat"]), crs="EPSG:4326")
+
+    try:
+        gdf_ee = geemap.gdf_to_ee(gdf)
+
+        if buffer:
+            pixel_values = gdf_ee.map(
+                lambda f: f.set('ts', ee_image_collection.getRegion(
+                    f.buffer(buffer).bounds().geometry(), scale))
+            )
+        else:
+            pixel_values = gdf_ee.map(
+                lambda f: f.set('ts', ee_image_collection.getRegion(
+                    f.geometry(), scale))
+            )
+
+        pixel_values_info = pixel_values.getInfo()
+
+        for feature in pixel_values_info['features']:
+            data = feature['properties']['ts']
+            data_id = feature['properties']['id']
+
+            if data:
+                columns = data[0]
+                rows = data[1:]
+                df_out = pd.DataFrame(rows, columns=columns)
+
+                out_path = os.path.join(out_dir, f'{data_id}_data.csv')
+                df_out.to_csv(out_path, index=False)
+                print(f"[\u2713] Saved: {out_path}")
+            else:
+                print(f"[!] No data for ID {data_id}")
+
+    except Exception as e:
+        print(f"[\u2717] Error: {e}")
+        time.sleep(retry_delay)
+        raise RuntimeError("Failed to download data.")
