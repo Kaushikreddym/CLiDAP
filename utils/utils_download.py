@@ -9,8 +9,9 @@ from omegaconf import DictConfig
 import os
 import yaml
 import time
-
+from tqdm import tqdm
 import warnings
+
 warnings.filterwarnings("ignore", category=Warning)
 
 def fetch_dwd_loc(cfg: DictConfig):
@@ -158,3 +159,69 @@ def fetch_ee_loc(cfg: DictConfig):
         print(f"[\u2717] Error: {e}")
         # time.sleep(retry_delay)
         raise RuntimeError("Failed to download data.")
+
+def fetch_ee_loc_mod(cfg: DictConfig):
+    # Initialize Earth Engine
+    ee.Initialize(project='earthengine-462007')
+
+    provider = cfg.dataset.lower()
+    variable_name = cfg.weather.parameter
+    ee_image_collection = cfg.mappings[provider].params.collection
+
+    sd = cfg.time_range.start_date
+    ed = cfg.time_range.end_date
+    var_name = cfg.mappings[provider].variables[variable_name].name
+    scale = cfg.mappings[provider].params.scale
+    out_dir = cfg.output.out_dir
+
+    lat = cfg.location.lat
+    lon = cfg.location.lon
+
+    # Handle model/scenario if needed
+    if provider == 'gddp':
+        model = cfg.mappings[provider].params.model
+        scenario = cfg.mappings[provider].params.scenario
+        dataset = ee.ImageCollection(ee_image_collection) \
+            .filter(ee.Filter.date(sd, ed)) \
+            .filter(ee.Filter.eq('model', model)) \
+            .filter(ee.Filter.eq('scenario', scenario))
+    elif provider == 'era5-land':
+        dataset = ee.ImageCollection(ee_image_collection) \
+            .filter(ee.Filter.date(sd, ed))
+    else:
+        raise ValueError(f"Provider '{provider}' is not supported.")
+
+    image_var = dataset.select(var_name)
+    point = ee.Geometry.Point(lon, lat)
+
+    os.makedirs(out_dir, exist_ok=True)
+    results = []
+
+    print(f"[i] Fetching time series for point: ({lat}, {lon})")
+
+    # Use a client-side list of images
+    image_list = image_var.toList(image_var.size())
+    n_images = image_var.size().getInfo()
+
+    for i in tqdm(range(n_images), desc="Processing images"):
+        try:
+            img = ee.Image(image_list.get(i))
+            date = img.date().format('YYYY-MM-dd').getInfo()
+
+            value = img.reduceRegion(
+                reducer=ee.Reducer.first(),
+                geometry=point,
+                scale=scale,
+                bestEffort=True
+            ).get(var_name)
+
+            value = value.getInfo() if value else None
+            results.append({"date": date, var_name: value})
+        except Exception as e:
+            print(f"[!] Skipping image {i} due to error: {e}")
+            continue
+
+    df_out = pd.DataFrame(results)
+    out_path = os.path.join(out_dir, f'point_timeseries.csv')
+    df_out.to_csv(out_path, index=False)
+    print(f"[✓] Saved timeseries to: {out_path}")

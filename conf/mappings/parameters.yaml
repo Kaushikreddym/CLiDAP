@@ -84,4 +84,56 @@ gddp:
     hurs:
       name: hurs
       unit: "%"
-
+mswx:
+  type: image
+  subsetting: None
+  params:
+    google_service_account: /beegfs/muduchuru/codes/python/download/conf/service.json
+  variables:
+    tasmin:
+      name: tasmin
+      folder_id: 1_h0hgJThJLXhVOk905IJ7EFpkFV5KDSC
+    tasmax:
+      name: tasmax
+      folder_id: 1BKvHhO1JsBKKzMPCbzl5UpvqpRXHTj9c
+    tas:
+      name: tas
+      folder_id: 10l3ThTEkabK0yfk7DvpEcNgXkhbF9NNt
+    pr:
+      name: pr
+      folder_id: 1gWoZ2bK2u5osJ8Iw-dvguZ56Kmz2QWrL
+    rsds:
+      name: rsds
+      folder_id: 1usXbIOi4_jBUdDaZbzPKXznx9PTYzHRv
+dwd_hyras:
+  variables:
+    tasmin:
+      name: air_temperature
+      base_url: "https://opendata.dwd.de/climate_environment/CDC/grids_germany/daily/hyras_de/air_temperature_min/"
+      prefix: "tasmin_hyras_1"
+      version: "v6-0"
+    tasmax:
+      name: air_temperature
+      base_url: "https://opendata.dwd.de/climate_environment/CDC/grids_germany/daily/hyras_de/air_temperature_max/"
+      prefix: "tasmax_hyras_1"
+      version: "v6-0"
+    tas:
+      name: air_temperature
+      base_url: "https://opendata.dwd.de/climate_environment/CDC/grids_germany/daily/hyras_de/air_temperature_mean/"
+      prefix: "tas_hyras_1"
+      version: "v6-0"
+    pr:
+      name: precipitation
+      base_url: "https://opendata.dwd.de/climate_environment/CDC/grids_germany/daily/hyras_de/precipitation/"
+      prefix: "pr_hyras_1"
+      version: "v5-0"
+    rsds:
+      name: rsds
+      base_url: "https://opendata.dwd.de/climate_environment/CDC/grids_germany/daily/hyras_de/radiation_global/"
+      prefix: "rsds_hyras_5"
+      version: "v3-0"
+    hurs:
+      name: humidity
+      base_url: "https://opendata.dwd.de/climate_environment/CDC/grids_germany/daily/hyras_de/humidity/"
+      prefix: "hurs_hyras_1"
+      version: "v6-0"

@@ -9,18 +9,35 @@ import concurrent.futures
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseDownload
-
+from datetime import datetime
+import ipdb
 import hydra
 from omegaconf import DictConfig
 
-def load_config(config_path):
-    """Load the YAML config file"""
-    with open(config_path, 'r') as f:
-        config = yaml.safe_load(f)
-    return config
-
 # Google Drive functions
-def download_google_drive_files(service, folder_id, varname, output_dir):
+def fetch_MSWX(var_cfg: DictConfig):
+    param_mapping = var_cfg.mappings
+    provider = var_cfg.dataset.lower()
+    parameter_key = var_cfg.weather.parameter
+    # Validate provider and parameter
+    # ipdb.set_trace()
+    param_info = param_mapping[provider]['variables'][parameter_key]
+    folder_id = param_info["folder_id"]
+    
+    start_date = var_cfg.time_range.start_date
+    end_date = var_cfg.time_range.end_date
+
+    # Parse dates & extract unique years
+    start_year = datetime.fromisoformat(start_date).year
+    end_year = datetime.fromisoformat(end_date).year
+    years = list(range(start_year, end_year + 1))
+
+    SCOPES = ['https://www.googleapis.com/auth/drive.readonly']
+    creds = service_account.Credentials.from_service_account_file(
+        param_mapping[provider].params.google_service_account, scopes=SCOPES
+    )
+    service = build('drive', 'v3', credentials=creds)
+
     """Download all files from the folder if not already present"""
     files = []
     page_token = None
@@ -35,14 +52,19 @@ def download_google_drive_files(service, folder_id, varname, output_dir):
         page_token = results.get("nextPageToken", None)
         if not page_token:
             break
-
+    files_to_download = [
+    f for f in files
+    if f['name'][:4].isdigit() and int(f['name'][:4]) in years
+    ]
+    
+    output_dir = './'
     os.makedirs(output_dir, exist_ok=True)
     downloaded_files = []
-
-    for file in files:
+    # ipdb.set_trace()
+    for file in files_to_download:
         filename = f"{file['name']}"
-        filepath = os.path.join(output_dir,varname, filename)
-
+        filepath = os.path.join(output_dir,parameter_key, filename)
+        os.makedirs(os.path.dirname(filepath), exist_ok=True)
         if os.path.exists(filepath):
             print(f"Skipping {filename} (already exists)")
             continue
@@ -61,58 +83,64 @@ def download_google_drive_files(service, folder_id, varname, output_dir):
 
     return downloaded_files
 
-# DWD functions
-# def get_dwd_links(base_url, file_extension):
-#     """Get download links from DWD server"""
-#     response = requests.get(base_url)
-#     soup = BeautifulSoup(response.content, "html.parser")
-#     return [base_url + link.get("href") for link in soup.find_all("a", href=True) 
-#             if link.get("href").endswith(file_extension)]
+def fetch_dwd(var_cfg):
+    """Download HYRAS data for one variable and a list of years."""
+    param_mapping = var_cfg.mappings
+    provider = var_cfg.dataset.lower()
+    parameter_key = var_cfg.weather.parameter
+    # Validate provider and parameter
+    # ipdb.set_trace()
+    param_info = param_mapping[provider]['variables'][parameter_key]
+    base_url = param_info["base_url"]
+    prefix = param_info["prefix"]
+    version = param_info["version"]
 
-# def download_dwd_file(url, output_dir):
-#     """Download a single file from DWD server"""
-#     os.makedirs(output_dir, exist_ok=True)
-#     filename = os.path.join(output_dir, url.split("/")[-1])
-    
-#     try:
-#         response = requests.get(url, stream=True)
-#         response.raise_for_status()
-#         with open(filename, "wb") as file:
-#             for chunk in response.iter_content(chunk_size=1024):
-#                 if chunk:
-#                     file.write(chunk)
-#         print(f"Downloaded: {filename}")
-#         return True
-#     except Exception as e:
-#         print(f"Failed to download {url}: {str(e)}")
-#         return False
+    start_date = var_cfg.time_range.start_date
+    end_date = var_cfg.time_range.end_date
 
-# def download_dwd_files_parallel(urls, output_dir, max_workers=5):
-#     """Download multiple DWD files in parallel"""
-#     with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
-#         futures = [executor.submit(download_dwd_file, url, output_dir) for url in urls]
-#         return [f.result() for f in futures]
+    # Parse dates & extract unique years
+    start_year = datetime.fromisoformat(start_date).year
+    end_year = datetime.fromisoformat(end_date).year
+    years = list(range(start_year, end_year + 1))
 
-@hydra.main(config_path="conf", config_name="config_download", version_base="1.3")
+    # output_file = cfg.output.filename
+    os.makedirs(parameter_key, exist_ok=True)
+
+    for year in years:
+        file_name = f"{prefix}_{year}_{version}_de.nc"
+        file_url = f"{base_url}{file_name}"
+        local_path = os.path.join(parameter_key, file_name)
+
+        print(f"⬇️  Checking: {file_url}")
+
+        # Check if file exists on server first (HEAD request)
+        head = requests.head(file_url)
+        if head.status_code != 200:
+            raise FileNotFoundError(f"❌ Not found on server: {file_url} (HTTP {head.status_code})")
+
+        if os.path.exists(local_path):
+            print(f"✔️  Exists locally: {local_path}")
+            continue
+
+        print(f"⬇️  Downloading: {file_url}")
+        try:
+            response = requests.get(file_url, stream=True)
+            response.raise_for_status()
+            with open(local_path, "wb") as f:
+                for chunk in response.iter_content(chunk_size=8192):
+                    f.write(chunk)
+            print(f"✅ Saved: {local_path}")
+        except requests.HTTPError as e:
+            raise RuntimeError(f"❌ Failed download: {file_url} — {e}")
+
+@hydra.main(config_path="conf", config_name="config", version_base="1.3")
 def main(cfg: DictConfig):
-    # Parse command line arguments
-    SCOPES = ['https://www.googleapis.com/auth/drive.readonly']
-    creds = service_account.Credentials.from_service_account_file(
-        cfg.google_service_account, scopes=SCOPES
-    )
-    service = build('drive', 'v3', credentials=creds)
-
-    mswx = cfg.datasets.MSWX
-    output_dir = mswx.output_dir
-
-    for var in mswx.variables:
-        print(f"\nProcessing variable: {var.name}")
-        downloaded = download_google_drive_files(
-            service=service,
-            folder_id=var.folder_id,
-            varname=var.name,
-            output_dir=output_dir
-        )
-        print(f"Downloaded {len(downloaded)} new files for {var.name}")
+    provider = cfg.dataset
+    # print(f"\nProcessing variable: {var.name}")
+    if provider.lower() == "mswx":
+        fetch_MSWX(cfg)
+    elif provider.lower() == "dwd_hyras":
+        fetch_dwd(cfg)
+    # print(f"Downloaded {len(downloaded)} new files for {var.name}")
 if __name__ == '__main__':
     main()

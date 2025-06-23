@@ -1,5 +1,6 @@
 
 defaults:
+  - _self_
   - mappings/parameters
   
 dataset: dwd
@@ -13,7 +14,7 @@ location:
   buffer_km: 25
 
 time_range:
-  start_date: "1950-01-01"
+  start_date: "2000-01-01"
   end_date: "2024-12-31"
 
 output:
