@@ -54,6 +54,25 @@ era5-land:
     rsds:
       name: surface_solar_radiation_downwards_sum
       unit: J/m2
+era5:
+  type: image
+  subsetting: point
+  params:
+    collection: ECMWF/ERA5/DAILY
+    scale: 27830
+  variables:
+    tas:
+      name: mean_2m_air_temperature
+      unit: K
+    tasmax:
+      name: maximum_2m_air_temperature
+      unit: K
+    tasmin:
+      name: minimum_2m_air_temperature
+      unit: K
+    pr:
+      name: total_precipitation
+      unit: m
 gddp:
   type: image
   subsetting: point
@@ -137,3 +156,17 @@ dwd_hyras:
       base_url: "https://opendata.dwd.de/climate_environment/CDC/grids_germany/daily/hyras_de/humidity/"
       prefix: "hurs_hyras_1"
       version: "v6-0"
+era5_cds:
+  params:
+    dataset: derived-era5-single-levels-daily-statistics
+  variables:
+    tas:
+      name: 2m_temperature
+    tasmax:
+      name: maximum_2m_temperature_since_previous_post_processing
+    tasmin:
+      name: minimum_2m_temperature_since_previous_post_processing
+    pr:
+      name: total_precipitation
+    rsds:
+      name: surface_solar_radiation_downwards
