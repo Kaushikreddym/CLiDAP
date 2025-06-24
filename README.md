@@ -8,6 +8,62 @@ It supports:
 ✅ Time series extraction for a user-specified latitude/longitude  
 ✅ Batch processing for many locations from a CSV file
 
+
+## 🚀 How to Run and Explore Configurations
+
+### ✅ Run a download job with custom overrides
+
+You can run the data download script and override any configuration value directly in the command line using [Hydra](https://hydra.cc/).
+
+For example, to download **ERA5-Land** data for **January 1–4, 2020**, run:
+
+```bash
+python download_location.py dataset='era5-land' \
+  time_range.start_date='2020-01-01' \
+  time_range.end_date='2020-01-04'
+```
+
+**What this does:**
+
+- `dataset='era5-land'` tells the script which dataset to use.
+- `time_range.start_date` and `time_range.end_date` override the default dates in your YAML config.
+- All other settings use your existing `config.yaml` in the `conf` folder.
+
+---
+
+### ✅ List all available datasets defined in your configuration
+
+To see what datasets are available (without running the downloader), you can dump the **resolved configuration** and filter it using [`yq`](https://github.com/mikefarah/yq).
+
+Run:
+
+```bash
+python download_location.py --cfg job | yq '.mappings | keys'
+```
+
+**What this does:**
+
+- `--cfg job` tells Hydra to output the final resolved configuration and exit.
+- `| yq '.mappings | keys'` filters the output to show only the dataset names defined under the `mappings` section.
+
+---
+
+### ⚡️ Tip
+
+- Make sure `yq` is installed:
+  ```bash
+  brew install yq   # macOS
+  # OR
+  pip install yq
+  ```
+
+- To see available variables for a specific dataset (for example `mswx`), run:
+  ```bash
+  python download_location.py --cfg job | yq '.mappings.mswx.variables | keys'
+  ```
+
+---
+
 ---
 
 ## ⚙️ **Key Features**

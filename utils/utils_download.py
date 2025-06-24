@@ -15,6 +15,8 @@ from datetime import datetime, timedelta
 import xarray as xr
 import hydra
 from omegaconf import DictConfig
+import pint
+import pint_pandas
 
 warnings.filterwarnings("ignore", category=Warning)
 
@@ -41,7 +43,7 @@ def fetch_dwd_loc(cfg: DictConfig):
     start_date = cfg.time_range.start_date
     end_date = cfg.time_range.end_date
     output_file = cfg.output.filename
-    # ipdb.set_trace()
+
     settings = Settings(
         ts_shape="long",
         ts_humanize=True,
@@ -69,7 +71,7 @@ def fetch_dwd_loc(cfg: DictConfig):
         'parameter': lambda x: x.mode().iloc[0] if not x.mode().empty else None,
         'quality': lambda x: x.mode().iloc[0] if not x.mode().empty else None,
     }).reset_index()
-    # ipdb.set_trace()
+
     df.set_index("date", inplace=True)
     df.reset_index(inplace=True)
     
@@ -146,7 +148,7 @@ def fetch_ee_loc(cfg: DictConfig):
             lambda f: f.set('ts', image_var.getRegion(
                 f.geometry(), scale))
         )
-        # ipdb.set_trace()
+
         pixel_values_info = pixel_values.getInfo()
 
         for feature in pixel_values_info['features']:
@@ -161,6 +163,14 @@ def fetch_ee_loc(cfg: DictConfig):
                 out_dir = hydra.utils.to_absolute_path(cfg.output.out_dir)
                 os.makedirs(out_dir, exist_ok=True)
                 out_path = os.path.join(out_dir, cfg.output.filename)
+                
+                df_out["variable"] = variable_name
+                df_out["latitude"] = lat
+                df_out["longitude"] = lon
+                df_out['source'] = provider.upper()
+                df_out['time'] = pd.to_datetime(df_out['time'], unit='ms')
+                df_out.rename(columns={variable_name: 'value'}, inplace=True)
+                df_out = df_out[["latitude", "longitude", "time", "source", "variable", "value"]]
 
                 df_out.to_csv(out_path, index=False)
                 print(f"[\u2713] Saved: {out_path}")
@@ -238,6 +248,17 @@ def fetch_ee_loc_mod(cfg: DictConfig):
     os.makedirs(out_dir, exist_ok=True)
     out_path = os.path.join(out_dir, cfg.output.filename)
 
+    df_out["variable"] = variable_name
+    df_out["latitude"] = lat
+    df_out["longitude"] = lon
+    df_out['source'] = provider.upper()
+    df_out.rename(columns={var_name: 'value', "date": 'time'}, inplace=True)
+    df_out = df_out[["latitude", "longitude", "time", "source", "variable", "value"]]
+
+    # ureg = pint.UnitRegistry()
+    # pint_pandas.PintType.ureg = ureg
+    # df_out['temperature'] = df['temperature'].astype('pint[C]')
+    
     df_out.to_csv(out_path, index=False)
     print(f"[✓] Saved timeseries to: {out_path}")
 
@@ -350,7 +371,7 @@ def fetch_dwd(var_cfg):
     provider = var_cfg.dataset.lower()
     parameter_key = var_cfg.weather.parameter
     # Validate provider and parameter
-    # ipdb.set_trace()
+
     param_info = param_mapping[provider]['variables'][parameter_key]
     base_url = param_info["base_url"]
     prefix = param_info["prefix"]
@@ -417,7 +438,7 @@ def extract_ts_dwd(cfg: DictConfig):
     provider = cfg.dataset.lower()
     parameter_key = cfg.weather.parameter
     # Validate provider and parameter
-    # ipdb.set_trace()
+
     param_info = param_mapping[provider]['variables'][parameter_key]
     prefix = param_info["prefix"]
     version = param_info["version"]
