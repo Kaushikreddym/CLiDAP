@@ -22,24 +22,7 @@ from utils.utils_download import *
 import hydra
 from omegaconf import DictConfig
 
-def build_output_filename(cfg: DictConfig) -> str:
-    """Generate output filename from pattern in config."""
-    provider = cfg.dataset.lower()
-    parameter = cfg.weather.parameter
-    lat = cfg.location.lat
-    lon = cfg.location.lon
-    start = cfg.time_range.start_date
-    end = cfg.time_range.end_date
 
-    pattern = cfg.output.get("filename", "{provider}_{parameter}_{start}_{end}.csv")
-    return pattern.format(
-        provider=provider,
-        parameter=parameter,
-        lat=lat,
-        lon=lon,
-        start=start,
-        end=end
-    )
 @hydra.main(config_path="conf", config_name="config", version_base="1.3")
 def main(cfg: DictConfig):
     provider = cfg.dataset

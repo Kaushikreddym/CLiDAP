@@ -535,3 +535,22 @@ def extract_ts_MSWX(cfg: DictConfig):
     print(f"✅ Saved MSWX time series to: {out_path}")
 
     return ts_all
+
+def build_output_filename(cfg: DictConfig) -> str:
+    """Generate output filename from pattern in config."""
+    provider = cfg.dataset.lower()
+    parameter = cfg.weather.parameter
+    lat = cfg.location.lat
+    lon = cfg.location.lon
+    start = cfg.time_range.start_date
+    end = cfg.time_range.end_date
+
+    pattern = cfg.output.get("filename", "{provider}_{parameter}_{start}_{end}.csv")
+    return pattern.format(
+        provider=provider,
+        parameter=parameter,
+        lat=lat,
+        lon=lon,
+        start=start,
+        end=end
+    )
