@@ -126,7 +126,7 @@ dwd_hyras:
       name: precipitation
       base_url: "https://opendata.dwd.de/climate_environment/CDC/grids_germany/daily/hyras_de/precipitation/"
       prefix: "pr_hyras_1"
-      version: "v5-0"
+      version: "v6-0"
     rsds:
       name: rsds
       base_url: "https://opendata.dwd.de/climate_environment/CDC/grids_germany/daily/hyras_de/radiation_global/"
