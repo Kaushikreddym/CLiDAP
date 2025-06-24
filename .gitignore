@@ -190,6 +190,7 @@ cython_debug/
 *.zarr
 *.nc
 *.nc4
+*.csv
 outputs/
 download_DWD/
 download_ee/
@@ -198,4 +199,3 @@ download_MSWX/
 download_station/
 download_CMIP/
 misc/
-
