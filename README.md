@@ -20,7 +20,26 @@ For example, to download **ERA5-Land** data for **January 1–4, 2020**, run:
 ```bash
 python download_location.py dataset='era5-land' \
   time_range.start_date='2020-01-01' \
-  time_range.end_date='2020-01-04'
+  time_range.end_date='2020-01-04' \
+  location.lat=52.5200 \
+  location.lon=13.4050
+```
+
+For downloading multiple locations from a csv file `locations.csv`, run:
+
+```bash
+python download_csv.py dataset='era5-land' \
+  time_range.start_date='2020-01-01' \
+  time_range.end_date='2020-01-04' \
+```
+
+an example `locations.csv` can be
+
+```csv
+lat,lon,city
+52.5200,13.4050,berlin
+48.1351,11.5820,munich
+53.5511,9.9937,hamburg
 ```
 
 **What this does:**
