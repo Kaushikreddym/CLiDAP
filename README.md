@@ -7,7 +7,7 @@ This project automates the fetching and extraction of weather data from multiple
 This project utilizes climate and weather datasets from a variety of data sources:
 
 - **DWD Station Data**  
-  Retrieved using the [DWD API](https://opendata.dwd.de/). Provides high-resolution observational data from Germany's national meteorological service.
+  Retrieved using the [DWD API](https://wetterdienst.readthedocs.io/en/latest/index.html). Provides high-resolution observational data from Germany's national meteorological service.
 
 - **MSWX (Multi-Source Weather)**  
   Accessed via [GloH2O's Google Drive](https://www.gloh2o.org/mswx/). Combines multiple satellite and reanalysis datasets for global gridded weather variables.
