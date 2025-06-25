@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 from wetterdienst import Settings
 from wetterdienst.provider.dwd.observation import DwdObservationRequest
 import geemap
@@ -18,6 +19,20 @@ from omegaconf import DictConfig
 import pint
 import pint_pandas
 
+from google.oauth2 import service_account
+from googleapiclient.discovery import build
+from googleapiclient.http import MediaIoBaseDownload
+
+import io
+import requests
+from scipy.spatial import cKDTree
+import argparse
+import re
+
+import requests
+from bs4 import BeautifulSoup
+import concurrent.futures
+
 warnings.filterwarnings("ignore", category=Warning)
 
 def fetch_dwd_loc(cfg: DictConfig):
@@ -36,6 +51,7 @@ def fetch_dwd_loc(cfg: DictConfig):
     resolution = param_info["resolution"]
     dataset = param_info["dataset"]
     variable_name = param_info["name"]
+    units = param_info.get("unit", None)
 
     lat = cfg.location.lat
     lon = cfg.location.lon
@@ -64,8 +80,9 @@ def fetch_dwd_loc(cfg: DictConfig):
     df = request.values.all().df.to_pandas()
     
     df['date'] = pd.to_datetime(df['date'])
-    df = df.groupby(['station_id', 'date']).agg({
+    df = df.groupby(['date']).agg({
         'value': 'mean',
+        'station_id': lambda x: x.mode().iloc[0] if not x.mode().empty else None,
         'resolution': lambda x: x.mode().iloc[0] if not x.mode().empty else None,
         'dataset': lambda x: x.mode().iloc[0] if not x.mode().empty else None,
         'parameter': lambda x: x.mode().iloc[0] if not x.mode().empty else None,
@@ -86,7 +103,8 @@ def fetch_dwd_loc(cfg: DictConfig):
     df["latitude"] = lat
     df["longitude"] = lon
     df['source'] = 'DWD'
-    df = df[["latitude", "longitude", "time", "source", "variable", "value"]]
+    df['units'] = units
+    df = df[["latitude", "longitude", "time", "source", "variable", "value","units"]]
     
     out_dir = hydra.utils.to_absolute_path(cfg.output.out_dir)
     os.makedirs(out_dir, exist_ok=True)
@@ -106,6 +124,7 @@ def fetch_ee_loc(cfg: DictConfig):
     sd = cfg.time_range.start_date
     ed = cfg.time_range.end_date
     var_name = cfg.mappings[provider].variables[variable_name].name
+    units = cfg.mappings[provider].variables[variable_name].unit
     if provider=='gddp':
         model = cfg.mappings[provider].params.model
         scenario = cfg.mappings[provider].params.scenario
@@ -168,12 +187,15 @@ def fetch_ee_loc(cfg: DictConfig):
                 df_out["latitude"] = lat
                 df_out["longitude"] = lon
                 df_out['source'] = provider.upper()
+                df_out['units'] = units
                 df_out['time'] = pd.to_datetime(df_out['time'], unit='ms')
                 df_out.rename(columns={variable_name: 'value'}, inplace=True)
-                df_out = df_out[["latitude", "longitude", "time", "source", "variable", "value"]]
+                df_out = df_out[["latitude", "longitude", "time", "source", "variable", "value","units"]]
 
                 df_out.to_csv(out_path, index=False)
                 print(f"[\u2713] Saved: {out_path}")
+
+                return df_out
             else:
                 print(f"[!] No data for ID {data_id}")
 
@@ -193,6 +215,7 @@ def fetch_ee_loc_mod(cfg: DictConfig):
     sd = cfg.time_range.start_date
     ed = cfg.time_range.end_date
     var_name = cfg.mappings[provider].variables[variable_name].name
+    units = cfg.mappings[provider].variables[variable_name].unit
     scale = cfg.mappings[provider].params.scale
     out_dir = cfg.output.out_dir
 
@@ -251,9 +274,10 @@ def fetch_ee_loc_mod(cfg: DictConfig):
     df_out["variable"] = variable_name
     df_out["latitude"] = lat
     df_out["longitude"] = lon
+    df_out['units'] = units
     df_out['source'] = provider.upper()
     df_out.rename(columns={var_name: 'value', "date": 'time'}, inplace=True)
-    df_out = df_out[["latitude", "longitude", "time", "source", "variable", "value"]]
+    df_out = df_out[["latitude", "longitude", "time", "source", "variable", "value",'units']]
 
     # ureg = pint.UnitRegistry()
     # pint_pandas.PintType.ureg = ureg
@@ -261,7 +285,7 @@ def fetch_ee_loc_mod(cfg: DictConfig):
     
     df_out.to_csv(out_path, index=False)
     print(f"[✓] Saved timeseries to: {out_path}")
-
+    return df_out
 def list_drive_files(folder_id, service):
     """
     List all files in a Google Drive folder, handling pagination.
@@ -491,14 +515,27 @@ def extract_ts_dwd(cfg: DictConfig):
     out_dir = hydra.utils.to_absolute_path(cfg.output.out_dir)
     os.makedirs(out_dir, exist_ok=True)
     out_path = os.path.join(out_dir, cfg.output.filename)
-
+    
+    ts_all["variable"] = param_info['name']
+    ts_all["latitude"] = target_lat
+    ts_all["longitude"] = target_lon
+    ts_all['source'] = provider.upper()
+    ts_all['units'] = ts.attrs['units']
+    ts_all.rename(columns={param_info['name']: 'value'}, inplace=True)
+    ts_all = ts_all[["latitude", "longitude", "time", "source", "variable", "value",'units']]
     ts_all.to_csv(out_path, index=False)
     print(f"✅ Saved time series to: {out_path}")
 
     return ts_all
 def extract_ts_MSWX(cfg: DictConfig):
     parameter = cfg.weather.parameter
+    param_mapping = cfg.mappings
     provider = cfg.dataset.lower()
+    parameter_key = cfg.weather.parameter
+    # Validate provider and parameter
+
+    param_info = param_mapping[provider]['variables'][parameter_key]
+
     base_dir = './data/'
 
     target_lat = cfg.location.lat
@@ -563,6 +600,14 @@ def extract_ts_MSWX(cfg: DictConfig):
     os.makedirs(out_dir, exist_ok=True)
     out_path = os.path.join(out_dir, cfg.output.filename)
 
+    ts_all["variable"] = param_info['name']
+    ts_all["latitude"] = target_lat
+    ts_all["longitude"] = target_lon
+    ts_all['source'] = provider.upper()
+    ts_all['units'] = ts.attrs['units']
+    ts_all.rename(columns={param_info['name']: 'value'}, inplace=True)
+    ts_all = ts_all[["latitude", "longitude", "time", "source", "variable", "value",'units']]
+    
     ts_all.to_csv(out_path, index=False)
     print(f"✅ Saved MSWX time series to: {out_path}")
 
