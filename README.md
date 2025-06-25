@@ -1,6 +1,28 @@
 # 📡 Weather Data Downloader
 
-This project automates the fetching and extraction of weather data from multiple sources — such as **MSWX**, **DWD HYRAS**, **ERA5-Land**, **GDDP**, and more — for a given location and time range.
+This project automates the fetching and extraction of weather data from multiple sources — such as **MSWX**, **DWD HYRAS**, **ERA5-Land**, **NASA-NEX-GDDP**, and more — for a given location and time range.
+
+## 📦 Data Sources
+
+This project utilizes climate and weather datasets from a variety of data sources:
+
+- **DWD Station Data**  
+  Retrieved using the [DWD API](https://opendata.dwd.de/). Provides high-resolution observational data from Germany's national meteorological service.
+
+- **MSWX (Multi-Source Weather)**  
+  Accessed via [GloH2O's Google Drive](https://www.gloh2o.org/mswx/). Combines multiple satellite and reanalysis datasets for global gridded weather variables.
+
+- **DWD HYRAS**  
+  Downloaded from the [DWD Open Data FTP Server](https://opendata.dwd.de/). Offers gridded observational data for Central Europe, useful for hydrological applications.
+
+- **ERA5, ERA5-Land**  
+  Accessed through the [Google Earth Engine](https://developers.google.com/earth-engine/datasets/catalog). Provides reanalysis datasets from ECMWF with high temporal and spatial resolution.
+
+- **NASA NEX-GDDP**  
+  Also retrieved via Earth Engine. Downscaled CMIP5/CMIP6 climate projections developed by NASA for local-scale impact assessment.
+
+- **CMIP6**  
+  Obtained using [ESGPull](https://github.com/roocs/esgpull) from the ESGF data nodes. Includes multi-model climate simulations following various future scenarios.
 
 It supports:
 ✅ Automatic file download (e.g., from Google Drive or online servers)  
