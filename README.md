@@ -22,7 +22,7 @@ This project utilizes climate and weather datasets from a variety of data source
   Also retrieved via Earth Engine. Downscaled CMIP5/CMIP6 climate projections developed by NASA for local-scale impact assessment.
 
 - **CMIP6**  
-  Obtained using [ESGPull](https://github.com/roocs/esgpull) from the ESGF data nodes. Includes multi-model climate simulations following various future scenarios.
+  Obtained using [ESGPull](https://esgf.github.io/esgf-download/) from the ESGF data nodes. Includes multi-model climate simulations following various future scenarios.
 
 It supports:
 ✅ Automatic file download (e.g., from Google Drive or online servers)  

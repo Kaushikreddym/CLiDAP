@@ -20,3 +20,4 @@ time_range:
 output:
   out_dir: "./data/"
   filename: "{provider}_{parameter}_LAT{lat}_LON{lon}_{start}_{end}.csv"
+  format: 'standard' # 'standard', 'ICASA', 'simplace', 'monica'
