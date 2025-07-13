@@ -187,15 +187,7 @@ cython_debug/
 .cursorignore
 .cursorindexingignore
 
-*.zarr
-*.nc
-*.nc4
-*.csv
 outputs/
-download_DWD/
-download_ee/
-download_ERA5/
-download_MSWX/
-download_station/
-download_CMIP/
 misc/
+backend/data
+backend/outputs
