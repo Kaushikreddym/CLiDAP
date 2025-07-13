@@ -1,4 +1,4 @@
-# 📡 Weather Data Downloader
+# 📡 CLiDAP – CLImate Data Access Portal
 
 This project automates the fetching and extraction of weather data from multiple sources — such as **MSWX**, **DWD HYRAS**, **ERA5-Land**, **NASA-NEX-GDDP**, and more — for a given location and time range.
 
