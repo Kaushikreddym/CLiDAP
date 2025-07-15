@@ -344,7 +344,7 @@ def fetch_MSWX(var_cfg):
         expected_files.append(basename)
         current += timedelta(days=1)
 
-    output_dir = './data/'
+    output_dir = var_cfg.data_dir
     local_files = []
     missing_files = []
 
@@ -415,7 +415,7 @@ def fetch_dwd(var_cfg):
     for year in years:
         file_name = f"{prefix}_{year}_{version}_de.nc"
         file_url = f"{base_url}{file_name}"
-        local_path = os.path.join('./data/',provider,parameter_key.upper(), file_name)
+        local_path = os.path.join(var_cfg.data_dir,provider,parameter_key.upper(), file_name)
         os.makedirs(os.path.dirname(local_path), exist_ok=True)
         print(f"⬇️  Checking: {file_url}")
 
@@ -457,7 +457,6 @@ def find_nearest_xy(ds, target_lat, target_lon):
     return iy, ix
 
 def extract_ts_dwd(cfg: DictConfig):
-    data_dir = cfg.output.out_dir  # Hydra will change cwd to the run dir; so this stays relative
     param_mapping = cfg.mappings
     provider = cfg.dataset.lower()
     parameter_key = cfg.weather.parameter
@@ -477,10 +476,10 @@ def extract_ts_dwd(cfg: DictConfig):
     files=[]
     for year in years:
         file_name = f"{prefix}_{year}_{version}_de.nc"
-        files.append(os.path.join('./data/',provider,parameter_key.upper(), file_name))
+        files.append(os.path.join(cfg.data_dir,provider,parameter_key.upper(), file_name))
 
     if not files:
-        raise FileNotFoundError(f"No NetCDF files found for {parameter}")
+        raise FileNotFoundError(f"No NetCDF files found for {parameter_key}")
 
     target_lat = cfg.location.lat
     target_lon = cfg.location.lon
@@ -536,7 +535,7 @@ def extract_ts_MSWX(cfg: DictConfig):
 
     param_info = param_mapping[provider]['variables'][parameter_key]
 
-    base_dir = './data/'
+    base_dir = cfg.data_dir
 
     target_lat = cfg.location.lat
     target_lon = cfg.location.lon

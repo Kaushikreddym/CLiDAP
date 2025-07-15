@@ -150,7 +150,7 @@ dwd_hyras:
       name: rsds
       base_url: "https://opendata.dwd.de/climate_environment/CDC/grids_germany/daily/hyras_de/radiation_global/"
       prefix: "rsds_hyras_5"
-      version: "v3-0"
+      version: "v3-1"
     hurs:
       name: hurs
       base_url: "https://opendata.dwd.de/climate_environment/CDC/grids_germany/daily/hyras_de/humidity/"
