@@ -8,7 +8,11 @@ import * as directives from 'vuetify/directives'
 import 'vuetify/styles'
 import '@mdi/font/css/materialdesignicons.css'
 import 'leaflet/dist/leaflet.css'
+// import Markdown from 'vite-plugin-md'
 
+// export default {
+//   plugins: [Markdown()],
+// }
 const vuetify = createVuetify({
   components,
   directives,

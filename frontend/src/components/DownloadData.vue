@@ -1,15 +1,22 @@
 <!-- src/components/DownloadButton.vue -->
 <template>
-  <v-btn color="success" @click="downloadCSV">
-    Download CSV
-  </v-btn>
+  <div>
+    <v-btn color="success" @click="downloadCSV">
+      Download CSV
+    </v-btn>
+    <v-btn color="primary" class="ml-2" :disabled="!lastCsv" @click="plotCSV">
+      Plot
+    </v-btn>
+  </div>
 </template>
 
 <script setup>
-import { computed } from 'vue'
-import { useAttrs } from 'vue'
+import { computed, ref } from 'vue'
+import { useAttrs, defineEmits } from 'vue'
 
+const emit = defineEmits(['downloaded'])
 const attrs = useAttrs()
+const lastCsv = ref(null)
 
 // Expected props: lat, lon, dataset, parameter, startDate, endDate
 const lat = computed(() => attrs.lat)
@@ -33,15 +40,26 @@ const downloadCSV = async () => {
     if (!response.ok) throw new Error('Failed to download CSV')
 
     const blob = await response.blob()
+    const text = await blob.text()
+    lastCsv.value = text
+    emit('downloaded', text) // Emit CSV text to parent
+
+    // Download as file
     const link = document.createElement('a')
     link.href = URL.createObjectURL(blob)
-    link.download = 'data.csv'
+    link.download = `${parameter.value}_${dataset.value}_lat${lat.value}_lon${lon.value}_${startDate.value}-${endDate.value}.csv`
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
   } catch (err) {
     console.error('CSV download failed:', err)
     alert('Could not download CSV.')
+  }
+}
+
+function plotCSV() {
+  if (lastCsv.value) {
+    emit('downloaded', lastCsv.value)
   }
 }
 </script>
